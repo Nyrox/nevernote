@@ -1,0 +1,18 @@
+[package]
+name = "nevernote"
+version = "0.1.0"
+authors = ["Nyrox <mark.oliver@hotmail.de>"]
+
+[dependencies]
+rocket="*"
+rocket_codegen="*"
+serde="*"
+serde_derive="*"
+
+[dependencies.mysql]
+features=["rustc-serialize"]
+
+[dependencies.rocket_contrib]
+version="*"
+default-features=false
+features=["json"]
