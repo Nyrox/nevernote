@@ -97,7 +97,7 @@ class LoginForm extends React.Component {
 		xhttp.onreadystatechange = function() {
 			if (this.readyState == 4 && this.status == 200) {
 				let response = JSON.parse(this.responseText);
-				console.log(response);
+				app.setState({"session_token": response.session_token});
 			}
 		}
 		xhttp.open("POST", "/api/auth/login", true);
@@ -152,7 +152,7 @@ class Application extends React.Component {
 			<Header />
 			<LeftSidebar />
 			<MainArea />
-			{ app.state.login_layer != undefined && <FullscreenLayer onClose={() => {app.setState({login_layer: undefined})}}>{ (app.state.login_layer == "login" ? <LoginForm /> : <RegisterForm />)}</FullscreenLayer>  }
+			{ app.state.session_token == undefined && app.state.login_layer != undefined && <FullscreenLayer onClose={() => {app.setState({login_layer: undefined})}}>{ (app.state.login_layer == "login" ? <LoginForm /> : <RegisterForm />)}</FullscreenLayer>  }
 		</React.Fragment>)
 	}
 }

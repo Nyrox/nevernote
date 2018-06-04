@@ -90,29 +90,59 @@ pub mod api {
             pub session_token: u64,
         }
 
-        #[post("/api/auth/login", data="<request>")]
-        pub fn login(request: Json<LoginRequest>, mut db_conn: DbConn) -> Json<LoginResponse> {
-			let mut result_set = db_conn.prep_exec("SELECT * FROM users WHERE login=:login AND password=:password", params!{
-				"login" => request.login.clone(),
-				"password" => request.password.clone()
-			}).unwrap();
-
-            return Json(match result_set.next() {
-                Some(row) => {
-                    let (id, login, password) = my::from_row(row.unwrap());
-                    let user = User { id, login, password };
-
-                    LoginResponse { success: true, session_token: generate_session(user.id).token }
-                },
-                None => {
-                    LoginResponse { success: false, session_token: 0 }
-                }
-            });
+        #[derive(Serialize, Deserialize)]
+        pub struct RegisterRequest {
+            pub email: String,
+            pub login: String,
+            pub password: String,
         }
 
-        fn generate_session(user_id: u64) -> Session {
+        #[post("/api/auth/login", data="<request>")]
+        pub fn login(request: Json<LoginRequest>, mut db_conn: DbConn) -> Json<LoginResponse> {
+            let mut id = 0;
+
+            {
+                let mut result_set = db_conn.prep_exec("SELECT id FROM users WHERE (email=:login OR login=:login) AND password=:password", params!{
+                    "login" => request.login.clone(),
+				    "password" => request.password.clone()
+			    }).unwrap();
+
+                if let Some(row) = result_set.next() {
+                    id = my::from_row(row.unwrap());
+                }
+                else {
+                    return Json(LoginResponse { success: false, session_token: 0 });
+                }
+            }
+
+            return Json(LoginResponse { success: true, session_token: generate_session(id, &mut db_conn).token });
+        }
+
+        #[post("/api/auth/register", data="<request>")]
+        pub fn register(request: Json<RegisterRequest>, mut db_conn: DbConn) -> Json<LoginResponse> {
+            db_conn.prep_exec("INSERT INTO users(email, login, password) VALUES(:email, :login, :password)", params!{
+                "email" => request.email.clone(),
+                "login" => request.login.clone(),
+                "password" => request.password.clone(),
+            }).unwrap();
+
+            // Grab the inserted record, so we can store it in a session
+            let inserted = db_conn.prep_exec("SELECT id FROM users WHERE email=:email", params!{ "email" => request.email.clone() });
+            println!("{:?}", inserted.unwrap().next());
+
+            return Json(LoginResponse { success: true, session_token: 0 });
+        }
+
+        fn generate_session(user_id: u64, db_conn: &mut DbConn) -> Session {
             let mut rng = thread_rng();
-            Session { user_id, token: rng.gen_range(1, ::std::u64::MAX) }
+            let session = Session { user_id, token: rng.gen_range(1, ::std::u64::MAX) };
+
+            db_conn.prep_exec("INSERT INTO sessions(token, fk_user) VALUES(:token, :user_id)", params! {
+                "token" => session.token,
+                "user_id" => session.user_id,
+            }).unwrap();
+
+            return session;
         }
     }
 }
@@ -133,7 +163,7 @@ fn public_file(file: PathBuf) -> Option<NamedFile> {
 fn main() {
     rocket::ignite()
 		.manage(create_mysql_pool())
-		.mount("/", routes![index, public_file, api::auth::login])
+		.mount("/", routes![index, public_file, api::auth::login, api::auth::register])
 		.launch();
 }
 

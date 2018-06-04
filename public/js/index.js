@@ -170,7 +170,7 @@ var LoginForm = function (_React$Component4) {
 			xhttp.onreadystatechange = function () {
 				if (this.readyState == 4 && this.status == 200) {
 					var response = JSON.parse(this.responseText);
-					console.log(response);
+					app.setState({ "session_token": response.session_token });
 				}
 			};
 			xhttp.open("POST", "/api/auth/login", true);
@@ -283,7 +283,7 @@ var Application = function (_React$Component8) {
 				React.createElement(Header, null),
 				React.createElement(LeftSidebar, null),
 				React.createElement(MainArea, null),
-				app.state.login_layer != undefined && React.createElement(
+				app.state.session_token == undefined && app.state.login_layer != undefined && React.createElement(
 					FullscreenLayer,
 					{ onClose: function onClose() {
 							app.setState({ login_layer: undefined });

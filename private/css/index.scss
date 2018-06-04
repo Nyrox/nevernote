@@ -1,6 +1,6 @@
 
 
-* { 
+* {
 	padding: 0;
 	margin: 0;
 	box-sizing: border-box;
@@ -14,7 +14,7 @@
 	top: 0;
 	left: 0;
 	z-index: 1000000;
-	
+
 	background: rgba(96, 96, 96, 0.4);
 }
 
@@ -23,6 +23,25 @@
 	left: 50%;
 	top: 50%;
 	transform: translateX(-50%) translateY(-50%);
+
+	form {
+		display: flex;
+		flex-direction: column;
+		padding: 24px;
+
+		background: white;
+	}
 }
 
+input {
+	padding: 8px;
 
+	&:not(:last-of-type) {
+		margin-bottom: 24px;
+	}
+
+	border-top: 2px solid grey;
+	border-bottom: 2px solid grey;
+	border-left: none;
+	border-right: none;
+}

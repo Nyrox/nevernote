@@ -17,3 +17,17 @@
   left: 50%;
   top: 50%;
   transform: translateX(-50%) translateY(-50%); }
+  .layer-inner form {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    background: white; }
+
+input {
+  padding: 8px;
+  border-top: 2px solid grey;
+  border-bottom: 2px solid grey;
+  border-left: none;
+  border-right: none; }
+  input:not(:last-of-type) {
+    margin-bottom: 24px; }
