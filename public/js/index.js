@@ -58,15 +58,26 @@ var FullscreenLayer = function (_React$Component2) {
 	function FullscreenLayer(props) {
 		_classCallCheck(this, FullscreenLayer);
 
-		return _possibleConstructorReturn(this, (FullscreenLayer.__proto__ || Object.getPrototypeOf(FullscreenLayer)).call(this, props));
+		var _this2 = _possibleConstructorReturn(this, (FullscreenLayer.__proto__ || Object.getPrototypeOf(FullscreenLayer)).call(this, props));
+
+		_this2.handleClick = _this2.handleClick.bind(_this2);
+		return _this2;
 	}
 
 	_createClass(FullscreenLayer, [{
+		key: "handleClick",
+		value: function handleClick(event) {
+			if (event.target.classList.contains("layer-fullscreen")) {
+				console.log("closing");
+				this.props.onClose();
+			}
+		}
+	}, {
 		key: "render",
 		value: function render() {
 			return React.createElement(
 				"div",
-				{ className: "layer-fullscreen" },
+				{ className: "layer-fullscreen", onClick: this.handleClick },
 				React.createElement(
 					"div",
 					{ className: "layer-inner" },
@@ -79,19 +90,74 @@ var FullscreenLayer = function (_React$Component2) {
 	return FullscreenLayer;
 }(React.Component);
 
-var LoginForm = function (_React$Component3) {
-	_inherits(LoginForm, _React$Component3);
+var RegisterForm = function (_React$Component3) {
+	_inherits(RegisterForm, _React$Component3);
 
-	function LoginForm(props) {
-		_classCallCheck(this, LoginForm);
+	function RegisterForm(props) {
+		_classCallCheck(this, RegisterForm);
 
-		var _this3 = _possibleConstructorReturn(this, (LoginForm.__proto__ || Object.getPrototypeOf(LoginForm)).call(this, props));
+		var _this3 = _possibleConstructorReturn(this, (RegisterForm.__proto__ || Object.getPrototypeOf(RegisterForm)).call(this, props));
 
-		_this3.state = { login: "", password: "" };
+		_this3.state = { login: "", password: "", email: "" };
 
 		_this3.handleSubmit = _this3.handleSubmit.bind(_this3);
 		_this3.handleChange = _this3.handleChange.bind(_this3);
 		return _this3;
+	}
+
+	_createClass(RegisterForm, [{
+		key: "handleSubmit",
+		value: function handleSubmit(event) {
+			event.preventDefault();
+
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					var response = JSON.parse(this.responseText);
+					console.log(response);
+				}
+			};
+			xhttp.open("POST", "/api/auth/register", true);
+			xhttp.setRequestHeader("Content-Type", "application/json");
+			xhttp.send(JSON.stringify({ login: this.state.login, password: this.state.password, email: this.state.email }));
+		}
+	}, {
+		key: "handleChange",
+		value: function handleChange(event) {
+			var _state = _defineProperty({}, event.target.name, event.target.value);
+			//state[event.target.name] = event.target.value;
+			this.setState(_state);
+		}
+	}, {
+		key: "render",
+		value: function render() {
+			return React.createElement(
+				"form",
+				{ className: "form-login", onSubmit: this.handleSubmit },
+				React.createElement("input", { name: "email", placeholder: "E-Mail", value: this.state.email, onChange: this.handleChange }),
+				React.createElement("input", { name: "login", placeholder: "Login", value: this.state.login, onChange: this.handleChange }),
+				React.createElement("input", { name: "password", placeholder: "Password", value: this.state.password, onChange: this.handleChange, type: "password" }),
+				React.createElement("input", { type: "submit", value: "Submit" })
+			);
+		}
+	}]);
+
+	return RegisterForm;
+}(React.Component);
+
+var LoginForm = function (_React$Component4) {
+	_inherits(LoginForm, _React$Component4);
+
+	function LoginForm(props) {
+		_classCallCheck(this, LoginForm);
+
+		var _this4 = _possibleConstructorReturn(this, (LoginForm.__proto__ || Object.getPrototypeOf(LoginForm)).call(this, props));
+
+		_this4.state = { login: "", password: "" };
+
+		_this4.handleSubmit = _this4.handleSubmit.bind(_this4);
+		_this4.handleChange = _this4.handleChange.bind(_this4);
+		return _this4;
 	}
 
 	_createClass(LoginForm, [{
@@ -134,8 +200,8 @@ var LoginForm = function (_React$Component3) {
 	return LoginForm;
 }(React.Component);
 
-var Header = function (_React$Component4) {
-	_inherits(Header, _React$Component4);
+var Header = function (_React$Component5) {
+	_inherits(Header, _React$Component5);
 
 	function Header() {
 		_classCallCheck(this, Header);
@@ -157,8 +223,8 @@ var Header = function (_React$Component4) {
 	return Header;
 }(React.Component);
 
-var LeftSidebar = function (_React$Component5) {
-	_inherits(LeftSidebar, _React$Component5);
+var LeftSidebar = function (_React$Component6) {
+	_inherits(LeftSidebar, _React$Component6);
 
 	function LeftSidebar() {
 		_classCallCheck(this, LeftSidebar);
@@ -176,8 +242,8 @@ var LeftSidebar = function (_React$Component5) {
 	return LeftSidebar;
 }(React.Component);
 
-var MainArea = function (_React$Component6) {
-	_inherits(MainArea, _React$Component6);
+var MainArea = function (_React$Component7) {
+	_inherits(MainArea, _React$Component7);
 
 	function MainArea() {
 		_classCallCheck(this, MainArea);
@@ -195,17 +261,17 @@ var MainArea = function (_React$Component6) {
 	return MainArea;
 }(React.Component);
 
-var Application = function (_React$Component7) {
-	_inherits(Application, _React$Component7);
+var Application = function (_React$Component8) {
+	_inherits(Application, _React$Component8);
 
 	function Application() {
 		_classCallCheck(this, Application);
 
-		var _this7 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
+		var _this8 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
 
-		window.app = _this7;
-		_this7.state = { login_layer: undefined, session_token: undefined };
-		return _this7;
+		window.app = _this8;
+		_this8.state = { login_layer: undefined, session_token: undefined };
+		return _this8;
 	}
 
 	_createClass(Application, [{
@@ -219,8 +285,10 @@ var Application = function (_React$Component7) {
 				React.createElement(MainArea, null),
 				app.state.login_layer != undefined && React.createElement(
 					FullscreenLayer,
-					null,
-					app.state.login_layer == "login" ? React.createElement(LoginForm, null) : null
+					{ onClose: function onClose() {
+							app.setState({ login_layer: undefined });
+						} },
+					app.state.login_layer == "login" ? React.createElement(LoginForm, null) : React.createElement(RegisterForm, null)
 				)
 			);
 		}

@@ -8,6 +8,7 @@ use rocket::request::{self, FromRequest};
 use rocket::{Request, State, Outcome};
 
 extern crate rocket_contrib;
+extern crate rand;
 
 #[macro_use]
 extern crate serde_derive;
@@ -53,10 +54,28 @@ impl DerefMut for DbConn {
 	}
 }
 
+pub mod model {
+    #[derive(Serialize, Deserialize)]
+    pub struct User {
+        pub id: u64,
+        pub login: String,
+        pub password: String,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Session {
+        pub token: u64,
+        pub user_id: u64,
+    }
+}
+
 pub mod api {
     pub mod auth {
 		use DbConn;
+        use my;
 		use rocket_contrib::Json;
+        use model::{Session, User};
+        use rand::{Rng, thread_rng};
 
         #[derive(Serialize, Deserialize)]
         pub struct LoginRequest {
@@ -68,7 +87,7 @@ pub mod api {
         pub struct LoginResponse {
             pub success: bool,
             // base 64 encoded
-            pub session_token: String,
+            pub session_token: u64,
         }
 
         #[post("/api/auth/login", data="<request>")]
@@ -78,11 +97,22 @@ pub mod api {
 				"password" => request.password.clone()
 			}).unwrap();
 
-			println!("{:?}", result_set.next());
+            return Json(match result_set.next() {
+                Some(row) => {
+                    let (id, login, password) = my::from_row(row.unwrap());
+                    let user = User { id, login, password };
 
+                    LoginResponse { success: true, session_token: generate_session(user.id).token }
+                },
+                None => {
+                    LoginResponse { success: false, session_token: 0 }
+                }
+            });
+        }
 
-            let response = LoginResponse { success: true, session_token: "kebab".to_owned() };
-            Json(response)
+        fn generate_session(user_id: u64) -> Session {
+            let mut rng = thread_rng();
+            Session { user_id, token: rng.gen_range(1, ::std::u64::MAX) }
         }
     }
 }
