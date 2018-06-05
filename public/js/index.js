@@ -10,10 +10,53 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-window.flask_editor = new CodeFlask("#editor", { language: "none" });
+var Profile = function (_React$Component) {
+	_inherits(Profile, _React$Component);
 
-var LoginStatus = function (_React$Component) {
-	_inherits(LoginStatus, _React$Component);
+	function Profile(props) {
+		_classCallCheck(this, Profile);
+
+		var _this = _possibleConstructorReturn(this, (Profile.__proto__ || Object.getPrototypeOf(Profile)).call(this, props));
+
+		_this.state = { user_info: {} };
+
+		if (app.state.user_id == 0) {
+			console.error("Profile instantiated without a valid user_id.");
+		}
+
+		var self = _this;
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function () {
+			if (this.readyState == 4 && this.status == 200) {
+				var response = JSON.parse(this.responseText);
+				self.setState({ "user_info": JSON.parse(this.responseText) });
+			}
+		};
+		xhttp.open("GET", "/api/user/" + app.state.user_id, true);
+		xhttp.send();
+		return _this;
+	}
+
+	_createClass(Profile, [{
+		key: "render",
+		value: function render() {
+			return React.createElement(
+				"div",
+				{ className: "profile" },
+				React.createElement(
+					"h2",
+					null,
+					this.state.user_info.login
+				)
+			);
+		}
+	}]);
+
+	return Profile;
+}(React.Component);
+
+var LoginStatus = function (_React$Component2) {
+	_inherits(LoginStatus, _React$Component2);
 
 	function LoginStatus() {
 		_classCallCheck(this, LoginStatus);
@@ -25,7 +68,11 @@ var LoginStatus = function (_React$Component) {
 		key: "render",
 		value: function render() {
 			if (app.state.session_token) {
-				return React.createElement("div", { className: "login-status" });
+				return React.createElement(
+					"div",
+					{ className: "login-status" },
+					React.createElement(Profile, null)
+				);
 			} else {
 				return React.createElement(
 					"div",
@@ -52,16 +99,16 @@ var LoginStatus = function (_React$Component) {
 	return LoginStatus;
 }(React.Component);
 
-var FullscreenLayer = function (_React$Component2) {
-	_inherits(FullscreenLayer, _React$Component2);
+var FullscreenLayer = function (_React$Component3) {
+	_inherits(FullscreenLayer, _React$Component3);
 
 	function FullscreenLayer(props) {
 		_classCallCheck(this, FullscreenLayer);
 
-		var _this2 = _possibleConstructorReturn(this, (FullscreenLayer.__proto__ || Object.getPrototypeOf(FullscreenLayer)).call(this, props));
+		var _this3 = _possibleConstructorReturn(this, (FullscreenLayer.__proto__ || Object.getPrototypeOf(FullscreenLayer)).call(this, props));
 
-		_this2.handleClick = _this2.handleClick.bind(_this2);
-		return _this2;
+		_this3.handleClick = _this3.handleClick.bind(_this3);
+		return _this3;
 	}
 
 	_createClass(FullscreenLayer, [{
@@ -90,19 +137,19 @@ var FullscreenLayer = function (_React$Component2) {
 	return FullscreenLayer;
 }(React.Component);
 
-var RegisterForm = function (_React$Component3) {
-	_inherits(RegisterForm, _React$Component3);
+var RegisterForm = function (_React$Component4) {
+	_inherits(RegisterForm, _React$Component4);
 
 	function RegisterForm(props) {
 		_classCallCheck(this, RegisterForm);
 
-		var _this3 = _possibleConstructorReturn(this, (RegisterForm.__proto__ || Object.getPrototypeOf(RegisterForm)).call(this, props));
+		var _this4 = _possibleConstructorReturn(this, (RegisterForm.__proto__ || Object.getPrototypeOf(RegisterForm)).call(this, props));
 
-		_this3.state = { login: "", password: "", email: "" };
+		_this4.state = { login: "", password: "", email: "" };
 
-		_this3.handleSubmit = _this3.handleSubmit.bind(_this3);
-		_this3.handleChange = _this3.handleChange.bind(_this3);
-		return _this3;
+		_this4.handleSubmit = _this4.handleSubmit.bind(_this4);
+		_this4.handleChange = _this4.handleChange.bind(_this4);
+		return _this4;
 	}
 
 	_createClass(RegisterForm, [{
@@ -145,19 +192,19 @@ var RegisterForm = function (_React$Component3) {
 	return RegisterForm;
 }(React.Component);
 
-var LoginForm = function (_React$Component4) {
-	_inherits(LoginForm, _React$Component4);
+var LoginForm = function (_React$Component5) {
+	_inherits(LoginForm, _React$Component5);
 
 	function LoginForm(props) {
 		_classCallCheck(this, LoginForm);
 
-		var _this4 = _possibleConstructorReturn(this, (LoginForm.__proto__ || Object.getPrototypeOf(LoginForm)).call(this, props));
+		var _this5 = _possibleConstructorReturn(this, (LoginForm.__proto__ || Object.getPrototypeOf(LoginForm)).call(this, props));
 
-		_this4.state = { login: "", password: "" };
+		_this5.state = { login: "", password: "" };
 
-		_this4.handleSubmit = _this4.handleSubmit.bind(_this4);
-		_this4.handleChange = _this4.handleChange.bind(_this4);
-		return _this4;
+		_this5.handleSubmit = _this5.handleSubmit.bind(_this5);
+		_this5.handleChange = _this5.handleChange.bind(_this5);
+		return _this5;
 	}
 
 	_createClass(LoginForm, [{
@@ -170,7 +217,7 @@ var LoginForm = function (_React$Component4) {
 			xhttp.onreadystatechange = function () {
 				if (this.readyState == 4 && this.status == 200) {
 					var response = JSON.parse(this.responseText);
-					app.setState({ "session_token": response.session_token });
+					app.setState({ "session_token": response.session_token, "user_id": response.user_id });
 				}
 			};
 			xhttp.open("POST", "/api/auth/login", true);
@@ -200,8 +247,8 @@ var LoginForm = function (_React$Component4) {
 	return LoginForm;
 }(React.Component);
 
-var Header = function (_React$Component5) {
-	_inherits(Header, _React$Component5);
+var Header = function (_React$Component6) {
+	_inherits(Header, _React$Component6);
 
 	function Header() {
 		_classCallCheck(this, Header);
@@ -215,6 +262,11 @@ var Header = function (_React$Component5) {
 			return React.createElement(
 				"div",
 				{ className: "header" },
+				React.createElement(
+					"h1",
+					null,
+					"Cyka"
+				),
 				React.createElement(LoginStatus, null)
 			);
 		}
@@ -223,55 +275,84 @@ var Header = function (_React$Component5) {
 	return Header;
 }(React.Component);
 
-var LeftSidebar = function (_React$Component6) {
-	_inherits(LeftSidebar, _React$Component6);
+var LeftSidebar = function (_React$Component7) {
+	_inherits(LeftSidebar, _React$Component7);
 
-	function LeftSidebar() {
+	function LeftSidebar(props) {
 		_classCallCheck(this, LeftSidebar);
 
-		return _possibleConstructorReturn(this, (LeftSidebar.__proto__ || Object.getPrototypeOf(LeftSidebar)).apply(this, arguments));
+		var _this7 = _possibleConstructorReturn(this, (LeftSidebar.__proto__ || Object.getPrototypeOf(LeftSidebar)).call(this, props));
+
+		_this7.state = { tiles: [] };
+
+		var self = _this7;
+		window.add_test = function () {
+			self.state.tiles.push(React.createElement(
+				"div",
+				{ className: "tile" },
+				React.createElement(
+					"p",
+					null,
+					"Yo"
+				)
+			));
+			self.forceUpdate();
+		};
+		return _this7;
 	}
 
 	_createClass(LeftSidebar, [{
 		key: "render",
 		value: function render() {
-			return React.createElement("div", { className: "sidebar-left" });
+			return React.createElement(
+				Scrollbars,
+				{ className: "sidebar-left" },
+				this.state.tiles
+			);
 		}
 	}]);
 
 	return LeftSidebar;
 }(React.Component);
 
-var MainArea = function (_React$Component7) {
-	_inherits(MainArea, _React$Component7);
+var Editor = function (_React$Component8) {
+	_inherits(Editor, _React$Component8);
 
-	function MainArea() {
-		_classCallCheck(this, MainArea);
+	function Editor(props) {
+		_classCallCheck(this, Editor);
 
-		return _possibleConstructorReturn(this, (MainArea.__proto__ || Object.getPrototypeOf(MainArea)).apply(this, arguments));
+		var _this8 = _possibleConstructorReturn(this, (Editor.__proto__ || Object.getPrototypeOf(Editor)).call(this, props));
+
+		_this8.state = {};
+		return _this8;
 	}
 
-	_createClass(MainArea, [{
+	_createClass(Editor, [{
+		key: "componentDidMount",
+		value: function componentDidMount() {
+			this.state.flask_editor = new CodeFlask(".editor", { language: "none" });
+		}
+	}, {
 		key: "render",
 		value: function render() {
-			return React.createElement("main", { className: "main-area" });
+			return React.createElement("div", { className: "codeflask editor" });
 		}
 	}]);
 
-	return MainArea;
+	return Editor;
 }(React.Component);
 
-var Application = function (_React$Component8) {
-	_inherits(Application, _React$Component8);
+var Application = function (_React$Component9) {
+	_inherits(Application, _React$Component9);
 
 	function Application() {
 		_classCallCheck(this, Application);
 
-		var _this8 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
+		var _this9 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
 
-		window.app = _this8;
-		_this8.state = { login_layer: undefined, session_token: undefined };
-		return _this8;
+		window.app = _this9;
+		_this9.state = { login_layer: undefined, user_id: 0, session_token: undefined };
+		return _this9;
 	}
 
 	_createClass(Application, [{
@@ -281,8 +362,12 @@ var Application = function (_React$Component8) {
 				React.Fragment,
 				null,
 				React.createElement(Header, null),
-				React.createElement(LeftSidebar, null),
-				React.createElement(MainArea, null),
+				React.createElement(
+					"div",
+					{ className: "main-area" },
+					React.createElement(LeftSidebar, null),
+					React.createElement(Editor, null)
+				),
 				app.state.session_token == undefined && app.state.login_layer != undefined && React.createElement(
 					FullscreenLayer,
 					{ onClose: function onClose() {

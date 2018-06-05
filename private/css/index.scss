@@ -1,9 +1,11 @@
-
+$header-height: 48px;
+$ci-blue: rgb(14, 94, 186);
 
 * {
 	padding: 0;
 	margin: 0;
 	box-sizing: border-box;
+	font-family: monospace;
 }
 
 
@@ -44,4 +46,52 @@ input {
 	border-bottom: 2px solid grey;
 	border-left: none;
 	border-right: none;
+}
+
+
+.header {
+	display: flex;
+	padding: 0 16px;
+	height: $header-height;
+	justify-content: space-between;
+	align-items: center;
+
+	color: rgb(244, 244, 244);
+	background: $ci-blue;
+
+	.login-status button {
+		border: none;
+		color: inherit;
+		background: none;
+		cursor: pointer;
+
+		&:not(:last-of-type) {
+			margin-right: 16px;
+		}
+	}
+}
+
+.main-area {
+	display: flex;
+	min-height: calc(100vh - #{$header-height});
+
+}
+
+.sidebar-left {
+	width: 320px;
+	height: 100%;
+	padding: 16px;
+	
+	overflow-y: scroll;
+
+	border-right: 1px solid $ci-blue;
+
+	.tile {
+		height: 250px;
+	}
+}
+
+.codeflask.editor {
+	width: auto;
+	flex-grow: 1;
 }

@@ -70,10 +70,16 @@ pub mod model {
 }
 
 pub mod api {
+    use DbConn;
+    use my;
+    use rocket_contrib::Json;
+    use model::{Session, User};
+    use rand::{Rng, thread_rng};
+
     pub mod auth {
-		use DbConn;
+        use DbConn;
         use my;
-		use rocket_contrib::Json;
+        use rocket_contrib::Json;
         use model::{Session, User};
         use rand::{Rng, thread_rng};
 
@@ -88,6 +94,7 @@ pub mod api {
             pub success: bool,
             // base 64 encoded
             pub session_token: u64,
+            pub user_id: u64,
         }
 
         #[derive(Serialize, Deserialize)]
@@ -111,11 +118,11 @@ pub mod api {
                     id = my::from_row(row.unwrap());
                 }
                 else {
-                    return Json(LoginResponse { success: false, session_token: 0 });
+                    return Json(LoginResponse { success: false, user_id: 0, session_token: 0 });
                 }
             }
 
-            return Json(LoginResponse { success: true, session_token: generate_session(id, &mut db_conn).token });
+            return Json(LoginResponse { success: true, user_id: id, session_token: generate_session(id, &mut db_conn).token });
         }
 
         #[post("/api/auth/register", data="<request>")]
@@ -127,15 +134,17 @@ pub mod api {
             }).unwrap();
 
             // Grab the inserted record, so we can store it in a session
-            let inserted = db_conn.prep_exec("SELECT id FROM users WHERE email=:email", params!{ "email" => request.email.clone() });
-            println!("{:?}", inserted.unwrap().next());
+            let mut inserted_id = 0;
+            {
+                let mut inserted = db_conn.prep_exec("SELECT id FROM users WHERE email=:email", params!{ "email" => request.email.clone() }).unwrap();
+                inserted_id = my::from_row(inserted.next().unwrap().unwrap());
+            }
 
-            return Json(LoginResponse { success: true, session_token: 0 });
+            return Json(LoginResponse { success: true, session_token: generate_session(inserted_id, &mut db_conn).token, user_id: inserted_id });
         }
 
         fn generate_session(user_id: u64, db_conn: &mut DbConn) -> Session {
-            let mut rng = thread_rng();
-            let session = Session { user_id, token: rng.gen_range(1, ::std::u64::MAX) };
+            let session = Session { user_id, token: thread_rng().gen_range(1, ::std::u64::MAX) };
 
             db_conn.prep_exec("INSERT INTO sessions(token, fk_user) VALUES(:token, :user_id)", params! {
                 "token" => session.token,
@@ -143,6 +152,25 @@ pub mod api {
             }).unwrap();
 
             return session;
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct PublicUserInfo {
+        pub login: String,
+    }
+
+    #[get("/api/user/<user_id>")]
+    pub fn get_user(user_id: u64, mut db_conn: DbConn) -> Option<Json<PublicUserInfo>> {
+        let mut result_set = db_conn.prep_exec("SELECT login FROM users WHERE id=:id", params!{
+            "id" => user_id
+        }).unwrap();
+
+        if let Some(row) = result_set.next() {
+            return Some(Json(PublicUserInfo { login: my::from_row(row.unwrap()) }));
+        }
+        else {
+            return None;
         }
     }
 }
@@ -163,8 +191,13 @@ fn public_file(file: PathBuf) -> Option<NamedFile> {
 fn main() {
     rocket::ignite()
 		.manage(create_mysql_pool())
-		.mount("/", routes![index, public_file, api::auth::login, api::auth::register])
-		.launch();
+		.mount("/", routes![
+            index,
+            public_file,
+            api::get_user,
+            api::auth::login,
+            api::auth::register
+        ]).launch();
 }
 
 

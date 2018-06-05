@@ -1,7 +1,8 @@
 * {
   padding: 0;
   margin: 0;
-  box-sizing: border-box; }
+  box-sizing: border-box;
+  font-family: monospace; }
 
 .layer-fullscreen {
   position: fixed;
@@ -31,3 +32,36 @@ input {
   border-right: none; }
   input:not(:last-of-type) {
     margin-bottom: 24px; }
+
+.header {
+  display: flex;
+  padding: 0 16px;
+  height: 48px;
+  justify-content: space-between;
+  align-items: center;
+  color: #f4f4f4;
+  background: #0e5eba; }
+  .header .login-status button {
+    border: none;
+    color: inherit;
+    background: none;
+    cursor: pointer; }
+    .header .login-status button:not(:last-of-type) {
+      margin-right: 16px; }
+
+.main-area {
+  display: flex;
+  min-height: calc(100vh - 48px); }
+
+.sidebar-left {
+  width: 320px;
+  height: 100%;
+  padding: 16px;
+  overflow-y: scroll;
+  border-right: 1px solid #0e5eba; }
+  .sidebar-left .tile {
+    height: 250px; }
+
+.codeflask.editor {
+  width: auto;
+  flex-grow: 1; }

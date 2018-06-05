@@ -1,14 +1,39 @@
 "use strict";
 
-window.flask_editor = new CodeFlask("#editor", { language: "none" });
+class Profile extends React.Component {
+	constructor(props) {
+		super(props);
+		this.state = { user_info: {} };
 
+		if(app.state.user_id == 0) {
+			console.error("Profile instantiated without a valid user_id.");
+		}
+
+		let self = this;
+		let xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				let response = JSON.parse(this.responseText);
+				self.setState({"user_info": JSON.parse(this.responseText)});
+			}
+		}
+		xhttp.open("GET", "/api/user/" + app.state.user_id, true);
+		xhttp.send();
+	}
+
+	render() {
+		return (<div className="profile">
+			<h2>{ this.state.user_info.login }</h2>
+		</div>);
+	}
+}
 
 class LoginStatus extends React.Component {
 
 	render() {
 		if (app.state.session_token) {
 			return (<div className="login-status">
-
+				<Profile />
 			</div>);
 		}
 		else {
@@ -97,7 +122,7 @@ class LoginForm extends React.Component {
 		xhttp.onreadystatechange = function() {
 			if (this.readyState == 4 && this.status == 200) {
 				let response = JSON.parse(this.responseText);
-				app.setState({"session_token": response.session_token});
+				app.setState({"session_token": response.session_token, "user_id": response.user_id});
 			}
 		}
 		xhttp.open("POST", "/api/auth/login", true);
@@ -123,20 +148,47 @@ class LoginForm extends React.Component {
 class Header extends React.Component {
 	render() {
 		return (<div className="header">
+			<h1>Cyka</h1>
 			<LoginStatus />
 		</div>);
 	}
 }
 
 class LeftSidebar extends React.Component {
+	constructor(props) {
+		super(props);
+		this.state = { tiles: [] };
+
+		let self = this;
+		window.add_test = function() {
+			self.state.tiles.push(<div className="tile"><p>Yo</p></div>);
+			self.forceUpdate();
+		}
+	}
+
 	render() {
-		return <div className="sidebar-left"></div>
+		return (<Scrollbars className="sidebar-left">
+			{this.state.tiles}
+		</Scrollbars>);
 	}
 }
 
-class MainArea extends React.Component {
+
+class Editor extends React.Component {
+	constructor(props) {
+		super(props);
+
+		this.state = {};
+	}
+
+	componentDidMount() {
+		this.state.flask_editor = new CodeFlask(".editor", { language: "none" });
+	}
+
 	render() {
-		return <main className="main-area"></main>
+		return (<div className="codeflask editor">
+
+		</div>);
 	}
 }
 
@@ -144,14 +196,16 @@ class Application extends React.Component {
 	constructor() {
 		super();
 		window.app = this;
-		this.state = { login_layer: undefined, session_token: undefined };
+		this.state = { login_layer: undefined, user_id: 0, session_token: undefined };
 	}
 
 	render() {
 		return (<React.Fragment>
 			<Header />
-			<LeftSidebar />
-			<MainArea />
+			<div className="main-area">
+				<LeftSidebar />
+				<Editor />
+			</div>
 			{ app.state.session_token == undefined && app.state.login_layer != undefined && <FullscreenLayer onClose={() => {app.setState({login_layer: undefined})}}>{ (app.state.login_layer == "login" ? <LoginForm /> : <RegisterForm />)}</FullscreenLayer>  }
 		</React.Fragment>)
 	}
