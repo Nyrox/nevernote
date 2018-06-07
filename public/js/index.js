@@ -115,7 +115,6 @@ var FullscreenLayer = function (_React$Component3) {
 		key: "handleClick",
 		value: function handleClick(event) {
 			if (event.target.classList.contains("layer-fullscreen")) {
-				console.log("closing");
 				this.props.onClose();
 			}
 		}
@@ -285,19 +284,6 @@ var LeftSidebar = function (_React$Component7) {
 
 		_this7.state = { tiles: [] };
 
-		var self = _this7;
-		window.add_test = function () {
-			self.state.tiles.push(React.createElement(
-				"div",
-				{ className: "tile" },
-				React.createElement(
-					"p",
-					null,
-					"Yo"
-				)
-			));
-			self.forceUpdate();
-		};
 		return _this7;
 	}
 
@@ -305,9 +291,18 @@ var LeftSidebar = function (_React$Component7) {
 		key: "render",
 		value: function render() {
 			return React.createElement(
-				Scrollbars,
+				"div",
 				{ className: "sidebar-left" },
-				this.state.tiles
+				React.createElement(
+					"div",
+					{ className: "toolbar" },
+					React.createElement("img", { src: "public/img/ui/new_note.svg" })
+				),
+				React.createElement(
+					"ul",
+					{ className: "note-list" },
+					this.state.tiles
+				)
 			);
 		}
 	}]);
@@ -330,12 +325,33 @@ var Editor = function (_React$Component8) {
 	_createClass(Editor, [{
 		key: "componentDidMount",
 		value: function componentDidMount() {
-			this.state.flask_editor = new CodeFlask(".editor", { language: "none" });
+			CodeFlask.prototype.closeCharacter = function () {/* CodeFlask's default behaviour for this is just awful */};
+
+			this.state.flask_editor = new CodeFlask(".editor", {
+				language: "none",
+				lineNumbers: true,
+				tabSize: 4
+			});
+
+			window.flask = this.state.flask_editor;
 		}
 	}, {
 		key: "render",
 		value: function render() {
-			return React.createElement("div", { className: "codeflask editor" });
+			return React.createElement(
+				"div",
+				{ className: "editor-container" },
+				React.createElement(
+					"div",
+					{ className: "toolbar" },
+					React.createElement(
+						"div",
+						{ className: "tabs" },
+						this.state.open_tabs
+					)
+				),
+				React.createElement("div", { className: "codeflask editor" })
+			);
 		}
 	}]);
 

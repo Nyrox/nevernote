@@ -53,7 +53,6 @@ class FullscreenLayer extends React.Component {
 
 	handleClick(event) {
 		if (event.target.classList.contains("layer-fullscreen")) {
-			console.log("closing");
 			this.props.onClose();
 		}
 	}
@@ -159,17 +158,18 @@ class LeftSidebar extends React.Component {
 		super(props);
 		this.state = { tiles: [] };
 
-		let self = this;
-		window.add_test = function() {
-			self.state.tiles.push(<div className="tile"><p>Yo</p></div>);
-			self.forceUpdate();
-		}
+
 	}
 
 	render() {
-		return (<Scrollbars className="sidebar-left">
-			{this.state.tiles}
-		</Scrollbars>);
+		return (<div className="sidebar-left">
+			<div className="toolbar">
+				<img src="public/img/ui/new_note.svg" />
+			</div>
+			<ul className="note-list">
+				{this.state.tiles}
+			</ul>
+		</div>);
 	}
 }
 
@@ -182,12 +182,25 @@ class Editor extends React.Component {
 	}
 
 	componentDidMount() {
-		this.state.flask_editor = new CodeFlask(".editor", { language: "none" });
+		CodeFlask.prototype.closeCharacter = function() { /* CodeFlask's default behaviour for this is just awful */ };
+		
+		this.state.flask_editor = new CodeFlask(".editor", {
+			language: "none",
+			lineNumbers: true,
+			tabSize: 4,
+		});
+
+		window.flask = this.state.flask_editor;
 	}
 
 	render() {
-		return (<div className="codeflask editor">
-
+		return (<div className="editor-container">
+			<div className="toolbar">
+				<div className="tabs">
+					{this.state.open_tabs}
+				</div>
+			</div>
+			<div className="codeflask editor"></div>
 		</div>);
 	}
 }
@@ -207,11 +220,9 @@ class Application extends React.Component {
 				<Editor />
 			</div>
 			{ app.state.session_token == undefined && app.state.login_layer != undefined && <FullscreenLayer onClose={() => {app.setState({login_layer: undefined})}}>{ (app.state.login_layer == "login" ? <LoginForm /> : <RegisterForm />)}</FullscreenLayer>  }
-		</React.Fragment>)
+		</React.Fragment>);
 	}
 }
-
-
 
 ReactDOM.render(
 	<Application />,

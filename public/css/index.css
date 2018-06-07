@@ -11,7 +11,7 @@
   top: 0;
   left: 0;
   z-index: 1000000;
-  background: rgba(96, 96, 96, 0.4); }
+  background: rgba(96, 96, 96, 0.2); }
 
 .layer-inner {
   position: absolute;
@@ -51,17 +51,35 @@ input {
 
 .main-area {
   display: flex;
+  align-items: stretch;
   min-height: calc(100vh - 48px); }
 
 .sidebar-left {
   width: 320px;
-  height: 100%;
-  padding: 16px;
-  overflow-y: scroll;
+  overflow-y: auto;
   border-right: 1px solid #0e5eba; }
   .sidebar-left .tile {
     height: 250px; }
+  .sidebar-left .toolbar {
+    display: flex;
+    border-bottom: 1px solid #0e5eba; }
+    .sidebar-left .toolbar img {
+      width: 48px;
+      height: 48px;
+      padding: 8px; }
+      .sidebar-left .toolbar img:not(:last-of-type) {
+        border-right: 1px solid #0e5eba; }
+
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; }
+  .editor-container .toolbar {
+    height: 42px;
+    border-bottom: 1px solid #0e5eba; }
 
 .codeflask.editor {
+  position: relative;
   width: auto;
+  height: auto;
   flex-grow: 1; }

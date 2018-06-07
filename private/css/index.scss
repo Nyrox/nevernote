@@ -17,7 +17,7 @@ $ci-blue: rgb(14, 94, 186);
 	left: 0;
 	z-index: 1000000;
 
-	background: rgba(96, 96, 96, 0.4);
+	background: rgba(96, 96, 96, 0.2);
 }
 
 .layer-inner {
@@ -73,25 +73,49 @@ input {
 
 .main-area {
 	display: flex;
-	min-height: calc(100vh - #{$header-height});
+	align-items: stretch;
 
+	min-height: calc(100vh - #{$header-height});
 }
 
 .sidebar-left {
 	width: 320px;
-	height: 100%;
-	padding: 16px;
-	
-	overflow-y: scroll;
+	overflow-y: auto;
 
 	border-right: 1px solid $ci-blue;
 
 	.tile {
 		height: 250px;
 	}
+
+	.toolbar {
+		display: flex;
+		border-bottom: 1px solid $ci-blue;
+
+		img {
+			width: 48px;
+			height: 48px;
+			padding: 8px;
+
+			&:not(:last-of-type) { border-right: 1px solid $ci-blue; }
+		}
+	}
+}
+
+.editor-container {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+
+	.toolbar {
+		height: 42px;
+		border-bottom: 1px solid $ci-blue;
+	}
 }
 
 .codeflask.editor {
+	position: relative;
 	width: auto;
+	height: auto;
 	flex-grow: 1;
 }
