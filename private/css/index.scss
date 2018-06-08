@@ -1,11 +1,14 @@
 $header-height: 48px;
 $ci-blue: rgb(14, 94, 186);
 
+body {
+	font-family: monospace;
+}
+
 * {
 	padding: 0;
 	margin: 0;
 	box-sizing: border-box;
-	font-family: monospace;
 }
 
 
@@ -42,10 +45,7 @@ input {
 		margin-bottom: 24px;
 	}
 
-	border-top: 2px solid grey;
-	border-bottom: 2px solid grey;
-	border-left: none;
-	border-right: none;
+	border: 2px solid grey;
 }
 
 button {
@@ -64,6 +64,7 @@ button {
 
 	color: rgb(244, 244, 244);
 	background: $ci-blue;
+	font-family: "Arial";
 
 	.login-status button {
 
@@ -71,17 +72,51 @@ button {
 			margin-right: 16px;
 		}
 	}
+
+	.profile {
+		display: flex;
+		align-items: center;
+
+		* { margin-left: 4px; }
+		button { margin-left: 16px; }
+	}
 }
 
 .main-area {
 	display: flex;
 	align-items: stretch;
+	justify-content: center;
 
-	min-height: calc(100vh - #{$header-height});
+	width: 100%;
+	height: calc(100vh - #{$header-height});
+	overflow: hidden;
+}
+
+.teaser {
+	position: absolute;
+	width: 400px;
+	left: 10%;
+	top: 64%;
+	color: black;
+	background: white;
+	padding: 16px;
+	box-shadow: black 10px 10px 64px;
+	font-family: Verdana;
+
+	h1 {
+		font-size: 24px;
+		font-weight:bold;
+	}
+
+	h2 {
+		font-size: 16px;
+		margin-top: 12px;
+		font-weight: normal;
+	}
 }
 
 .sidebar-left {
-	width: 320px;
+	width: 240px;
 	overflow-y: auto;
 
 	border-right: 1px solid $ci-blue;
@@ -90,14 +125,25 @@ button {
 		height: 250px;
 	}
 
+	.note-list {
+		padding: 8px;
+		color: $ci-blue;
+		font-family: Verdana;
+		font-size: 16px;
+		font-weight: normal;
+
+		li { cursor: pointer; font-weight: normal; font-size: inherit; margin-top: 8px; }
+	}
+
 	.toolbar {
 		display: flex;
 		border-bottom: 1px solid $ci-blue;
 
 		img {
-			width: 48px;
-			height: 48px;
-			padding: 8px;
+			width: 41px;
+			height: 41px;
+			padding: 6px;
+			cursor: pointer;
 
 			&:not(:last-of-type) { border-right: 1px solid $ci-blue; }
 		}
@@ -117,6 +163,11 @@ button {
 
 		height: 42px;
 		border-bottom: 1px solid $ci-blue;
+
+		.note-title { border: none; font-size: 24px; font-family: "Arial"; background: none; padding: 0; }
+
+		button { font-weight: bold; }
+		.btn-delete { color: rgb(243, 32, 16); }
 	}
 }
 
@@ -126,3 +177,5 @@ button {
 	height: auto;
 	flex-grow: 1;
 }
+
+h1 { font-size: 24px; }

@@ -51,7 +51,9 @@ class Profile extends React.Component {
 
 	render() {
 		return (<div className="profile">
+			<p style={{fontSize: "10px"}}>Logged in:</p>
 			<h2>{ this.state.user_info.login }</h2>
+			<button onClick={() => { app.logout() }}>Logout</button>
 		</div>);
 	}
 }
@@ -107,8 +109,9 @@ class RegisterForm extends React.Component {
 		api_call("POST", "/api/auth/register", { login: this.state.login, password: this.state.password, email: this.state.email }, function(status, response) {
 			console.log(typeof response);
 			if (status == 200) {
-				let _response = JSON.parse(response);
-				app.setState({"session_token": _response.session_token, "user_id": _response.user_id});
+				let response_data = JSON.parse(response);
+				app.setState({user_id: response_data.user_id});
+				app.updateSessionCookieInternal();
 			}
 			else {
 				console.log(status, response);
@@ -127,7 +130,7 @@ class RegisterForm extends React.Component {
 			<input name="email" placeholder="E-Mail" value={this.state.email} onChange={this.handleChange} />
 			<input name="login" placeholder="Login" value={this.state.login} onChange={this.handleChange} />
 			<input name="password" placeholder="Password" value={this.state.password} onChange={this.handleChange} type="password" />
-			<input type="submit" value="Submit" />
+			<input type="submit" value="Register" />
 		</form>);
 	}
 }
@@ -144,10 +147,11 @@ class LoginForm extends React.Component {
 	handleSubmit(event) {
 		event.preventDefault();
 
-		api_call("POST", "/api/auth/login", { login: this.state, password: this.state.password }, function(status, response) {
+		api_call("POST", "/api/auth/login", { login: this.state.login, password: this.state.password }, function(status, response) {
 			if (status == 200) {
-				let response = JSON.parse(response);
-				app.setState({"session_token": response.session_token, "user_id": response.user_id});
+				let response_data = JSON.parse(response);
+				app.setState({user_id: response_data.user_id});
+				app.updateSessionCookieInternal();
 			}
 			else {
 				console.log(status, response);
@@ -163,9 +167,9 @@ class LoginForm extends React.Component {
 
 	render() {
 		return (<form className="form-login"  onSubmit={this.handleSubmit}>
-			<input name="login" value={this.state.login} onChange={this.handleChange} />
-			<input name="password" value={this.state.password} onChange={this.handleChange} type="password" />
-			<input type="submit" value="Submit" />
+			<input name="login" placeholder="Login/E-Mail" value={this.state.login} onChange={this.handleChange} />
+			<input name="password" placeholder="Password" value={this.state.password} onChange={this.handleChange} type="password" />
+			<input type="submit" value="Login" />
 		</form>);
 	}
 }
@@ -173,7 +177,8 @@ class LoginForm extends React.Component {
 class Header extends React.Component {
 	render() {
 		return (<div className="header">
-			<h1>Cyka</h1>
+			<h1>AE Software</h1>
+			<button style={{marginRight: "auto", marginLeft: "48px"}} onClick={() => editor.updateContent(0, "New draft", "I like chickens!")}>New draft</button>
 			<LoginStatus />
 		</div>);
 	}
@@ -182,18 +187,28 @@ class Header extends React.Component {
 class LeftSidebar extends React.Component {
 	constructor(props) {
 		super(props);
+		window.sidebar = this;
 		this.state = { tiles: [] };
+		this.updateNoteList();
+	}
 
+	updateNoteList() {
+		api_call("GET", "api/note/get/user/" + app.state.user_id, null, (function(status, response_text) {
+			if (status != 200) { console.log(status, response_text); return; }
 
+			let response = JSON.parse(response_text);
+			this.state.tiles = response;
+			this.forceUpdate();
+		}).bind(this));
 	}
 
 	render() {
 		return (<div className="sidebar-left">
-			<div className="toolbar">
-				<img src="public/img/ui/new_note.svg" />
-			</div>
 			<ul className="note-list">
-				{this.state.tiles}
+				{this.state.tiles.map((tile, index) => {
+					console.log(tile);
+					return <li onClick={() => this.onTileClicked(index)} key={tile.id}>{tile.title}</li>;
+				})}
 			</ul>
 		</div>);
 	}
@@ -203,11 +218,22 @@ class LeftSidebar extends React.Component {
 class Editor extends React.Component {
 	constructor(props) {
 		super(props);
+		window.editor = this;
 
 		this.state = {
-			note_id: 0,
-			title: "Untitled Draft"
+			id: 0,
+			title: "Untitled Draft",
 		};
+
+		this.onChange = this.onChange.bind(this);
+		this.save= this.save.bind(this);
+		this.delete = this.delete.bind(this);
+	}
+
+	updateContent(id, title, content) {
+		this.setState({id: id, title: title});
+		this.state.flask_editor.updateCode(content);
+		this.state.flask_editor.updateLineNumbersCount();
 	}
 
 	componentDidMount() {
@@ -225,39 +251,99 @@ class Editor extends React.Component {
 	render() {
 		return (<div className="editor-container">
 			<div className="toolbar">
-				<input className="note-title" onChange={this.onChange.bind(this)} value={this.state.title} name="title"></input>
+				<input className="note-title" onChange={this.onChange} value={this.state.title} name="title"></input>
 
-				<button onClick={this.save.bind(this)}>Save</button>
+				<div className="button-group">
+					{ this.state.id != 0 && <button className="btn-delete" style={{marginRight: "16px"}} onClick={this.delete}>Delete</button> }
+					<button onClick={this.save.bind(this)}>Save</button>
+				</div>
 			</div>
 			<div className="codeflask editor"></div>
 		</div>);
 	}
 
-	onChange() {
+	onChange(event) {
 		let _state = {[event.target.name]: event.target.value};
 		this.setState(_state);
 	}
 
 	save() {
-		api_call("POST", "/api/note/create", {}, function(status, response) {
-			console.log(status, response);
-		});
+		if (this.state.id == 0) {
+			api_call("POST", "/api/note/create", { title: this.state.title, content: this.state.flask_editor.getCode() }, (function(status, response) {
+				this.setState({id: JSON.parse(response).id})
+				sidebar.updateNoteList();
+			}).bind(this));
+		}
+		else {
+			api_call("POST", "/api/note/save", { id: this.state.id, title: this.state.title, content: this.state.flask_editor.getCode() }, function(status, response) {
+				sidebar.updateNoteList();
+			})
+		}
+	}
+
+	delete() {
+		if(!window.confirm("Are you sure you want to delet this note?")) return;
+
+		api_call("POST", "/api/note/delete/" + this.state.id, null, (function(status, responseText) {
+			this.updateContent(0, "New draft", "I like chickens!");
+			sidebar.updateNoteList();
+		}).bind(this));
 	}
 }
 
 class Application extends React.Component {
+	getCookieValue(a) {
+    	var b = document.cookie.match('(^|;)\\s*' + a + '\\s*=\\s*([^;]+)');
+    	return b ? b.pop() : '';
+	}
+
+	updateSessionCookieInternal() {
+		let session_token = this.getCookieValue("NN-X-Session-Token");
+		if(session_token != "") {
+			this.setState({session_token: session_token});
+		}
+	}
+
+	logout() {
+		api_call("GET", "/logout", null, (function(status, responseText) {
+			if (status !== 200) { console.error(status, responseText); }
+
+			this.setState({
+				session_token: undefined,
+				user_id: undefined
+			});
+		}).bind(this));
+	}
+
 	constructor() {
 		super();
 		window.app = this;
 		this.state = { login_layer: undefined, user_id: 0, session_token: undefined };
+
+		// Grab the session cookie if we have one
+		let session_token = this.getCookieValue("NN-X-Session-Token");
+		if(session_token != "") {
+			this.state.session_token = session_token;
+			this.state.user_id = parseInt(sessionStorage.getItem("user_id"));
+		}
 	}
 
 	render() {
+		sessionStorage.setItem("user_id", this.state.user_id);
+
 		return (<React.Fragment>
 			<Header />
 			<div className="main-area">
-				<LeftSidebar />
-				<Editor />
+				{ app.state.session_token != undefined ? (<React.Fragment>
+					<LeftSidebar />
+					<Editor />
+				</React.Fragment>) : (<React.Fragment>
+					<img src="/public/img/background.jpg" />
+					<div className="teaser">
+						<h1>Generic enterprise solutions for your trivial problems</h1>
+						<h2>Register now to get the full benefit of absolutely overengineered software!</h2>
+					</div>
+				</React.Fragment>)}
 			</div>
 			{ app.state.session_token == undefined && app.state.login_layer != undefined && <FullscreenLayer onClose={() => {app.setState({login_layer: undefined})}}>{ (app.state.login_layer == "login" ? <LoginForm /> : <RegisterForm />)}</FullscreenLayer>  }
 		</React.Fragment>);

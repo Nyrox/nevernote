@@ -64,37 +64,45 @@ pub mod model {
 
     #[derive(Serialize, Deserialize)]
     pub struct User {
-        pub id: u64,
+        pub id: u32,
         pub login: String,
         pub password: String,
     }
 
 	#[derive(Serialize, Deserialize)]
 	pub struct Note {
-		pub id: u64,
+		pub id: u32,
+        pub user_id: u32,
 		pub title: String,
 		pub content: String,
 	}
 
     #[derive(Serialize, Deserialize)]
     pub struct Session {
-        pub token: u64,
-        pub user_id: u64,
+        pub token: u32,
+        pub user_id: u32,
     }
 
 	impl<'a, 'r> FromRequest<'a, 'r> for Session {
 	    type Error = ();
 
 	    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-			println!("{:?}", request);
-			let token = request.cookies().get_private("NN-X-Session-Token");
-			println!("{:?}", token);
+			let mut cookies = request.cookies();
 
-			let pool = request.guard::<State<my::Pool>>()?;
-
-			match token {
+			match cookies.get_private("NN-X-Session-Token") {
 				Some(token) => {
-					Outcome::Success(Session { token: token.value().parse().unwrap(), user_id: 0 })
+                    let pool = request.guard::<State<my::Pool>>()?;
+                    let mut conn = pool.get_conn().unwrap();
+                    let token_string: String = token.value().to_owned();
+                    let mut result_set = conn.prep_exec("SELECT fk_user FROM sessions WHERE token=:token", params! { "token" => token_string }).unwrap();
+
+                    if let Some(row) = result_set.next() {
+                        return Outcome::Success(Session { token: token.value().parse().unwrap(), user_id: my::from_row(row.unwrap()) });
+                    }
+                    else {
+                        return Outcome::Failure((Status::Unauthorized, ()));
+                    }
+
 				}
 				None => Outcome::Forward(())
 			}
@@ -127,8 +135,8 @@ pub mod api {
         pub struct LoginResponse {
             pub success: bool,
             // base 64 encoded
-            pub session_token: u64,
-            pub user_id: u64,
+            pub session_token: u32,
+            pub user_id: u32,
         }
 
         #[derive(Serialize, Deserialize)]
@@ -139,7 +147,7 @@ pub mod api {
         }
 
         #[post("/api/auth/login", data="<request>")]
-        pub fn login(request: Json<LoginRequest>, mut db_conn: DbConn) -> Json<LoginResponse> {
+        pub fn login(request: Json<LoginRequest>, mut db_conn: DbConn, mut cookies: Cookies) -> Json<LoginResponse> {
             let mut id = 0;
 
             {
@@ -156,7 +164,10 @@ pub mod api {
                 }
             }
 
-            return Json(LoginResponse { success: true, user_id: id, session_token: generate_session(id, &mut db_conn).token });
+            let session = generate_session(id, &mut db_conn);
+			cookies.add_private(Cookie::new("NN-X-Session-Token", session.token.to_string()));
+
+            return Json(LoginResponse { success: true, user_id: id, session_token: session.token });
         }
 
         #[post("/api/auth/register", data="<request>")]
@@ -180,10 +191,9 @@ pub mod api {
             return Json(LoginResponse { success: true, session_token: session.token, user_id: inserted_id });
         }
 
-        fn generate_session(user_id: u64, db_conn: &mut DbConn) -> Session {
+        fn generate_session(user_id: u32, db_conn: &mut DbConn) -> Session {
 			println!("{:?}", ::std::thread::current().id());
-            let session = Session { user_id, token: thread_rng().gen_range(1, ::std::u64::MAX) };
-			println!("{}, {}", thread_rng().gen_range(1, ::std::u64::MAX), thread_rng().gen_range(1, ::std::u64::MAX));
+            let session = Session { user_id, token: thread_rng().gen_range(1, ::std::u32::MAX) };
 
             db_conn.prep_exec("INSERT INTO sessions(token, fk_user) VALUES(:token, :user_id)", params! {
                 "token" => session.token,
@@ -200,7 +210,7 @@ pub mod api {
     }
 
     #[get("/api/user/<user_id>")]
-    pub fn get_user(user_id: u64, mut db_conn: DbConn) -> Option<Json<PublicUserInfo>> {
+    pub fn get_user(user_id: u32, mut db_conn: DbConn) -> Option<Json<PublicUserInfo>> {
         let mut result_set = db_conn.prep_exec("SELECT login FROM users WHERE id=:id", params!{
             "id" => user_id
         }).unwrap();
@@ -216,17 +226,82 @@ pub mod api {
 
 	#[derive(Serialize, Deserialize)]
 	pub struct CreateNoteRequest {
-
+        title: String,
+        content: String
 	}
 
 	#[post("/api/note/create", data="<request>")]
 	pub fn create_note(request: Json<CreateNoteRequest>, mut db_conn: DbConn, session: Session) -> Json<Note> {
-		Json(Note {
-			id: 0,
-			title: String::new(),
-			content: String::new(),
-		})
+        let note_id = thread_rng().gen_range(1, ::std::u32::MAX);
+
+        db_conn.prep_exec("INSERT INTO notes(id, fk_user, title, content) VALUES(:id, :fk_user, :title, :content)", params!{
+            "id" => note_id,
+            "fk_user" => session.user_id,
+            "title" => request.title.clone(),
+            "content" => request.content.clone()
+        }).unwrap();
+
+        return Json(Note {
+            id: note_id,
+            user_id: session.user_id,
+            title: request.title.clone(),
+            content: request.content.clone(),
+        });
 	}
+
+    #[derive(Serialize, Deserialize)]
+    pub struct SaveNoteRequest {
+        pub id: u32,
+        pub title: String,
+        pub content: String,
+    }
+
+    #[post("/api/note/save", data="<request>")]
+    pub fn save_note(request: Json<SaveNoteRequest>, mut db_conn: DbConn, session: Session) -> Json<Note> {
+        db_conn.prep_exec("UPDATE notes SET title=:title, content=:content WHERE id=:id", params!{
+            "id" => request.id,
+            "title" => request.title.clone(),
+            "content" => request.content.clone()
+        }).unwrap();
+
+        return Json(Note {
+            id: request.id,
+            user_id: session.user_id,
+            title: request.title.clone(),
+            content: request.content.clone(),
+        });
+    }
+
+    #[post("/api/note/delete/<id>")]
+    pub fn delete_note(id: u32, mut db_conn: DbConn, session: Session) -> () {
+        db_conn.prep_exec("DELETE FROM notes WHERE (id=:request_id AND fk_user=:user_id)", params! {
+            "request_id" => id,
+            "user_id" => session.user_id
+        }).unwrap();
+    }
+
+    #[get("/api/note/get/user/<user_id>")]
+    pub fn get_notes_for_user(user_id: u32, mut db_conn: DbConn, session: Session) -> Json<Vec<Note>> {
+        // TODO: Implement visibility/permission system?
+        // For now only the users who owns a post can see it
+        if user_id != session.user_id { return Json(Vec::new()); }
+
+        let mut out_vec = Vec::new();
+        let mut result_set = db_conn.prep_exec("SELECT id, title, content FROM notes WHERE fk_user=:user_id", params! { "user_id" => user_id }).unwrap();
+        for row in result_set {
+            let (id, title, content) = my::from_row(row.unwrap());
+            out_vec.push(Note {
+               id, title, content, user_id
+            });
+        }
+
+        Json(out_vec)
+    }
+}
+
+#[get("/logout")]
+fn logout(mut cookies: Cookies) -> () {
+    cookies.remove_private(Cookie::named("NN-X-Session-Token"));
 }
 
 #[get("/")]
@@ -245,9 +320,13 @@ fn main() {
 		.manage(create_mysql_pool())
 		.mount("/", routes![
             index,
+            logout,
             public_file,
             api::get_user,
+            api::get_notes_for_user,
 			api::create_note,
+            api::save_note,
+            api::delete_note,
             api::auth::login,
             api::auth::register
         ]).launch();

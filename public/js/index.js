@@ -73,9 +73,21 @@ var Profile = function (_React$Component) {
 				"div",
 				{ className: "profile" },
 				React.createElement(
+					"p",
+					{ style: { fontSize: "10px" } },
+					"Logged in:"
+				),
+				React.createElement(
 					"h2",
 					null,
 					this.state.user_info.login
+				),
+				React.createElement(
+					"button",
+					{ onClick: function onClick() {
+							app.logout();
+						} },
+					"Logout"
 				)
 			);
 		}
@@ -188,8 +200,9 @@ var RegisterForm = function (_React$Component4) {
 			api_call("POST", "/api/auth/register", { login: this.state.login, password: this.state.password, email: this.state.email }, function (status, response) {
 				console.log(typeof response === "undefined" ? "undefined" : _typeof(response));
 				if (status == 200) {
-					var _response = JSON.parse(response);
-					app.setState({ "session_token": _response.session_token, "user_id": _response.user_id });
+					var response_data = JSON.parse(response);
+					app.setState({ user_id: response_data.user_id });
+					app.updateSessionCookieInternal();
 				} else {
 					console.log(status, response);
 				}
@@ -211,7 +224,7 @@ var RegisterForm = function (_React$Component4) {
 				React.createElement("input", { name: "email", placeholder: "E-Mail", value: this.state.email, onChange: this.handleChange }),
 				React.createElement("input", { name: "login", placeholder: "Login", value: this.state.login, onChange: this.handleChange }),
 				React.createElement("input", { name: "password", placeholder: "Password", value: this.state.password, onChange: this.handleChange, type: "password" }),
-				React.createElement("input", { type: "submit", value: "Submit" })
+				React.createElement("input", { type: "submit", value: "Register" })
 			);
 		}
 	}]);
@@ -239,10 +252,11 @@ var LoginForm = function (_React$Component5) {
 		value: function handleSubmit(event) {
 			event.preventDefault();
 
-			api_call("POST", "/api/auth/login", { login: this.state, password: this.state.password }, function (status, response) {
+			api_call("POST", "/api/auth/login", { login: this.state.login, password: this.state.password }, function (status, response) {
 				if (status == 200) {
-					var _response2 = JSON.parse(_response2);
-					app.setState({ "session_token": _response2.session_token, "user_id": _response2.user_id });
+					var response_data = JSON.parse(response);
+					app.setState({ user_id: response_data.user_id });
+					app.updateSessionCookieInternal();
 				} else {
 					console.log(status, response);
 				}
@@ -261,9 +275,9 @@ var LoginForm = function (_React$Component5) {
 			return React.createElement(
 				"form",
 				{ className: "form-login", onSubmit: this.handleSubmit },
-				React.createElement("input", { name: "login", value: this.state.login, onChange: this.handleChange }),
-				React.createElement("input", { name: "password", value: this.state.password, onChange: this.handleChange, type: "password" }),
-				React.createElement("input", { type: "submit", value: "Submit" })
+				React.createElement("input", { name: "login", placeholder: "Login/E-Mail", value: this.state.login, onChange: this.handleChange }),
+				React.createElement("input", { name: "password", placeholder: "Password", value: this.state.password, onChange: this.handleChange, type: "password" }),
+				React.createElement("input", { type: "submit", value: "Login" })
 			);
 		}
 	}]);
@@ -289,7 +303,14 @@ var Header = function (_React$Component6) {
 				React.createElement(
 					"h1",
 					null,
-					"Cyka"
+					"AE Software"
+				),
+				React.createElement(
+					"button",
+					{ style: { marginRight: "auto", marginLeft: "48px" }, onClick: function onClick() {
+							return editor.updateContent(0, "New draft", "I like chickens!");
+						} },
+					"New draft"
 				),
 				React.createElement(LoginStatus, null)
 			);
@@ -307,26 +328,46 @@ var LeftSidebar = function (_React$Component7) {
 
 		var _this7 = _possibleConstructorReturn(this, (LeftSidebar.__proto__ || Object.getPrototypeOf(LeftSidebar)).call(this, props));
 
+		window.sidebar = _this7;
 		_this7.state = { tiles: [] };
-
+		_this7.updateNoteList();
 		return _this7;
 	}
 
 	_createClass(LeftSidebar, [{
+		key: "updateNoteList",
+		value: function updateNoteList() {
+			api_call("GET", "api/note/get/user/" + app.state.user_id, null, function (status, response_text) {
+				if (status != 200) {
+					console.log(status, response_text);return;
+				}
+
+				var response = JSON.parse(response_text);
+				this.state.tiles = response;
+				this.forceUpdate();
+			}.bind(this));
+		}
+	}, {
 		key: "render",
 		value: function render() {
+			var _this8 = this;
+
 			return React.createElement(
 				"div",
 				{ className: "sidebar-left" },
 				React.createElement(
-					"div",
-					{ className: "toolbar" },
-					React.createElement("img", { src: "public/img/ui/new_note.svg" })
-				),
-				React.createElement(
 					"ul",
 					{ className: "note-list" },
-					this.state.tiles
+					this.state.tiles.map(function (tile, index) {
+						console.log(tile);
+						return React.createElement(
+							"li",
+							{ onClick: function onClick() {
+									return _this8.onTileClicked(index);
+								}, key: tile.id },
+							tile.title
+						);
+					})
 				)
 			);
 		}
@@ -341,16 +382,29 @@ var Editor = function (_React$Component8) {
 	function Editor(props) {
 		_classCallCheck(this, Editor);
 
-		var _this8 = _possibleConstructorReturn(this, (Editor.__proto__ || Object.getPrototypeOf(Editor)).call(this, props));
+		var _this9 = _possibleConstructorReturn(this, (Editor.__proto__ || Object.getPrototypeOf(Editor)).call(this, props));
 
-		_this8.state = {
-			note_id: 0,
+		window.editor = _this9;
+
+		_this9.state = {
+			id: 0,
 			title: "Untitled Draft"
 		};
-		return _this8;
+
+		_this9.onChange = _this9.onChange.bind(_this9);
+		_this9.save = _this9.save.bind(_this9);
+		_this9.delete = _this9.delete.bind(_this9);
+		return _this9;
 	}
 
 	_createClass(Editor, [{
+		key: "updateContent",
+		value: function updateContent(id, title, content) {
+			this.setState({ id: id, title: title });
+			this.state.flask_editor.updateCode(content);
+			this.state.flask_editor.updateLineNumbersCount();
+		}
+	}, {
 		key: "componentDidMount",
 		value: function componentDidMount() {
 			CodeFlask.prototype.closeCharacter = function () {/* CodeFlask's default behaviour for this is just awful */};
@@ -372,11 +426,20 @@ var Editor = function (_React$Component8) {
 				React.createElement(
 					"div",
 					{ className: "toolbar" },
-					React.createElement("input", { className: "note-title", onChange: this.onChange.bind(this), value: this.state.title, name: "title" }),
+					React.createElement("input", { className: "note-title", onChange: this.onChange, value: this.state.title, name: "title" }),
 					React.createElement(
-						"button",
-						{ onClick: this.save.bind(this) },
-						"Save"
+						"div",
+						{ className: "button-group" },
+						this.state.id != 0 && React.createElement(
+							"button",
+							{ className: "btn-delete", style: { marginRight: "16px" }, onClick: this.delete },
+							"Delete"
+						),
+						React.createElement(
+							"button",
+							{ onClick: this.save.bind(this) },
+							"Save"
+						)
 					)
 				),
 				React.createElement("div", { className: "codeflask editor" })
@@ -384,16 +447,33 @@ var Editor = function (_React$Component8) {
 		}
 	}, {
 		key: "onChange",
-		value: function onChange() {
+		value: function onChange(event) {
 			var _state = _defineProperty({}, event.target.name, event.target.value);
 			this.setState(_state);
 		}
 	}, {
 		key: "save",
 		value: function save() {
-			api_call("POST", "/api/note/create", {}, function (status, response) {
-				console.log(status, response);
-			});
+			if (this.state.id == 0) {
+				api_call("POST", "/api/note/create", { title: this.state.title, content: this.state.flask_editor.getCode() }, function (status, response) {
+					this.setState({ id: JSON.parse(response).id });
+					sidebar.updateNoteList();
+				}.bind(this));
+			} else {
+				api_call("POST", "/api/note/save", { id: this.state.id, title: this.state.title, content: this.state.flask_editor.getCode() }, function (status, response) {
+					sidebar.updateNoteList();
+				});
+			}
+		}
+	}, {
+		key: "delete",
+		value: function _delete() {
+			if (!window.confirm("Are you sure you want to delet this note?")) return;
+
+			api_call("POST", "/api/note/delete/" + this.state.id, null, function (status, responseText) {
+				this.updateContent(0, "New draft", "I like chickens!");
+				sidebar.updateNoteList();
+			}.bind(this));
 		}
 	}]);
 
@@ -403,19 +483,58 @@ var Editor = function (_React$Component8) {
 var Application = function (_React$Component9) {
 	_inherits(Application, _React$Component9);
 
+	_createClass(Application, [{
+		key: "getCookieValue",
+		value: function getCookieValue(a) {
+			var b = document.cookie.match('(^|;)\\s*' + a + '\\s*=\\s*([^;]+)');
+			return b ? b.pop() : '';
+		}
+	}, {
+		key: "updateSessionCookieInternal",
+		value: function updateSessionCookieInternal() {
+			var session_token = this.getCookieValue("NN-X-Session-Token");
+			if (session_token != "") {
+				this.setState({ session_token: session_token });
+			}
+		}
+	}, {
+		key: "logout",
+		value: function logout() {
+			api_call("GET", "/logout", null, function (status, responseText) {
+				if (status !== 200) {
+					console.error(status, responseText);
+				}
+
+				this.setState({
+					session_token: undefined,
+					user_id: undefined
+				});
+			}.bind(this));
+		}
+	}]);
+
 	function Application() {
 		_classCallCheck(this, Application);
 
-		var _this9 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
+		var _this10 = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
 
-		window.app = _this9;
-		_this9.state = { login_layer: undefined, user_id: 0, session_token: undefined };
-		return _this9;
+		window.app = _this10;
+		_this10.state = { login_layer: undefined, user_id: 0, session_token: undefined };
+
+		// Grab the session cookie if we have one
+		var session_token = _this10.getCookieValue("NN-X-Session-Token");
+		if (session_token != "") {
+			_this10.state.session_token = session_token;
+			_this10.state.user_id = parseInt(sessionStorage.getItem("user_id"));
+		}
+		return _this10;
 	}
 
 	_createClass(Application, [{
 		key: "render",
 		value: function render() {
+			sessionStorage.setItem("user_id", this.state.user_id);
+
 			return React.createElement(
 				React.Fragment,
 				null,
@@ -423,8 +542,30 @@ var Application = function (_React$Component9) {
 				React.createElement(
 					"div",
 					{ className: "main-area" },
-					React.createElement(LeftSidebar, null),
-					React.createElement(Editor, null)
+					app.state.session_token != undefined ? React.createElement(
+						React.Fragment,
+						null,
+						React.createElement(LeftSidebar, null),
+						React.createElement(Editor, null)
+					) : React.createElement(
+						React.Fragment,
+						null,
+						React.createElement("img", { src: "/public/img/background.jpg" }),
+						React.createElement(
+							"div",
+							{ className: "teaser" },
+							React.createElement(
+								"h1",
+								null,
+								"Generic enterprise solutions for your trivial problems"
+							),
+							React.createElement(
+								"h2",
+								null,
+								"Register now to get the full benefit of absolutely overengineered software!"
+							)
+						)
+					)
 				),
 				app.state.session_token == undefined && app.state.login_layer != undefined && React.createElement(
 					FullscreenLayer,

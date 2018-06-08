@@ -1,8 +1,10 @@
+body {
+  font-family: monospace; }
+
 * {
   padding: 0;
   margin: 0;
-  box-sizing: border-box;
-  font-family: monospace; }
+  box-sizing: border-box; }
 
 .layer-fullscreen {
   position: fixed;
@@ -26,10 +28,7 @@
 
 input {
   padding: 8px;
-  border-top: 2px solid grey;
-  border-bottom: 2px solid grey;
-  border-left: none;
-  border-right: none; }
+  border: 2px solid grey; }
   input:not(:last-of-type) {
     margin-bottom: 24px; }
 
@@ -46,28 +45,69 @@ button {
   justify-content: space-between;
   align-items: center;
   color: #f4f4f4;
-  background: #0e5eba; }
+  background: #0e5eba;
+  font-family: "Arial"; }
   .header .login-status button:not(:last-of-type) {
     margin-right: 16px; }
+  .header .profile {
+    display: flex;
+    align-items: center; }
+    .header .profile * {
+      margin-left: 4px; }
+    .header .profile button {
+      margin-left: 16px; }
 
 .main-area {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - 48px); }
+  justify-content: center;
+  width: 100%;
+  height: calc(100vh - 48px);
+  overflow: hidden; }
+
+.teaser {
+  position: absolute;
+  width: 400px;
+  left: 10%;
+  top: 64%;
+  color: black;
+  background: white;
+  padding: 16px;
+  box-shadow: black 10px 10px 64px;
+  font-family: Verdana; }
+  .teaser h1 {
+    font-size: 24px;
+    font-weight: bold; }
+  .teaser h2 {
+    font-size: 16px;
+    margin-top: 12px;
+    font-weight: normal; }
 
 .sidebar-left {
-  width: 320px;
+  width: 240px;
   overflow-y: auto;
   border-right: 1px solid #0e5eba; }
   .sidebar-left .tile {
     height: 250px; }
+  .sidebar-left .note-list {
+    padding: 8px;
+    color: #0e5eba;
+    font-family: Verdana;
+    font-size: 16px;
+    font-weight: normal; }
+    .sidebar-left .note-list li {
+      cursor: pointer;
+      font-weight: normal;
+      font-size: inherit;
+      margin-top: 8px; }
   .sidebar-left .toolbar {
     display: flex;
     border-bottom: 1px solid #0e5eba; }
     .sidebar-left .toolbar img {
-      width: 48px;
-      height: 48px;
-      padding: 8px; }
+      width: 41px;
+      height: 41px;
+      padding: 6px;
+      cursor: pointer; }
       .sidebar-left .toolbar img:not(:last-of-type) {
         border-right: 1px solid #0e5eba; }
 
@@ -82,9 +122,22 @@ button {
     align-items: center;
     height: 42px;
     border-bottom: 1px solid #0e5eba; }
+    .editor-container .toolbar .note-title {
+      border: none;
+      font-size: 24px;
+      font-family: "Arial";
+      background: none;
+      padding: 0; }
+    .editor-container .toolbar button {
+      font-weight: bold; }
+    .editor-container .toolbar .btn-delete {
+      color: #f32010; }
 
 .codeflask.editor {
   position: relative;
   width: auto;
   height: auto;
   flex-grow: 1; }
+
+h1 {
+  font-size: 24px; }
