@@ -3,7 +3,7 @@
 
 extern crate rocket;
 use rocket::response::{NamedFile};
-use rocket::http::Status;
+use rocket::http::{Status, Cookie, Cookies};
 use rocket::request::{self, FromRequest};
 use rocket::{Request, State, Outcome};
 
@@ -54,7 +54,14 @@ impl DerefMut for DbConn {
 	}
 }
 
+
+
 pub mod model {
+	use rocket::http::{Status, Cookie, Cookies};
+	use rocket::request::{self, FromRequest};
+	use rocket::{Request, State, Outcome};
+	use mysql as my;
+
     #[derive(Serialize, Deserialize)]
     pub struct User {
         pub id: u64,
@@ -62,24 +69,51 @@ pub mod model {
         pub password: String,
     }
 
+	#[derive(Serialize, Deserialize)]
+	pub struct Note {
+		pub id: u64,
+		pub title: String,
+		pub content: String,
+	}
+
     #[derive(Serialize, Deserialize)]
     pub struct Session {
         pub token: u64,
         pub user_id: u64,
     }
+
+	impl<'a, 'r> FromRequest<'a, 'r> for Session {
+	    type Error = ();
+
+	    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+			println!("{:?}", request);
+			let token = request.cookies().get_private("NN-X-Session-Token");
+			println!("{:?}", token);
+
+			let pool = request.guard::<State<my::Pool>>()?;
+
+			match token {
+				Some(token) => {
+					Outcome::Success(Session { token: token.value().parse().unwrap(), user_id: 0 })
+				}
+				None => Outcome::Forward(())
+			}
+	    }
+	}
 }
 
 pub mod api {
     use DbConn;
     use my;
     use rocket_contrib::Json;
-    use model::{Session, User};
+    use model::{Session, User, Note};
     use rand::{Rng, thread_rng};
 
     pub mod auth {
         use DbConn;
         use my;
         use rocket_contrib::Json;
+		use rocket::http::{Status, Cookie, Cookies};
         use model::{Session, User};
         use rand::{Rng, thread_rng};
 
@@ -126,7 +160,7 @@ pub mod api {
         }
 
         #[post("/api/auth/register", data="<request>")]
-        pub fn register(request: Json<RegisterRequest>, mut db_conn: DbConn) -> Json<LoginResponse> {
+        pub fn register(request: Json<RegisterRequest>, mut db_conn: DbConn, mut cookies: Cookies) -> Json<LoginResponse> {
             db_conn.prep_exec("INSERT INTO users(email, login, password) VALUES(:email, :login, :password)", params!{
                 "email" => request.email.clone(),
                 "login" => request.login.clone(),
@@ -140,11 +174,16 @@ pub mod api {
                 inserted_id = my::from_row(inserted.next().unwrap().unwrap());
             }
 
-            return Json(LoginResponse { success: true, session_token: generate_session(inserted_id, &mut db_conn).token, user_id: inserted_id });
+			let session = generate_session(inserted_id, &mut db_conn);
+			cookies.add_private(Cookie::new("NN-X-Session-Token", session.token.to_string()));
+
+            return Json(LoginResponse { success: true, session_token: session.token, user_id: inserted_id });
         }
 
         fn generate_session(user_id: u64, db_conn: &mut DbConn) -> Session {
+			println!("{:?}", ::std::thread::current().id());
             let session = Session { user_id, token: thread_rng().gen_range(1, ::std::u64::MAX) };
+			println!("{}, {}", thread_rng().gen_range(1, ::std::u64::MAX), thread_rng().gen_range(1, ::std::u64::MAX));
 
             db_conn.prep_exec("INSERT INTO sessions(token, fk_user) VALUES(:token, :user_id)", params! {
                 "token" => session.token,
@@ -173,6 +212,21 @@ pub mod api {
             return None;
         }
     }
+
+
+	#[derive(Serialize, Deserialize)]
+	pub struct CreateNoteRequest {
+
+	}
+
+	#[post("/api/note/create", data="<request>")]
+	pub fn create_note(request: Json<CreateNoteRequest>, mut db_conn: DbConn, session: Session) -> Json<Note> {
+		Json(Note {
+			id: 0,
+			title: String::new(),
+			content: String::new(),
+		})
+	}
 }
 
 #[get("/")]
@@ -186,8 +240,6 @@ fn public_file(file: PathBuf) -> Option<NamedFile> {
 }
 
 
-
-
 fn main() {
     rocket::ignite()
 		.manage(create_mysql_pool())
@@ -195,6 +247,7 @@ fn main() {
             index,
             public_file,
             api::get_user,
+			api::create_note,
             api::auth::login,
             api::auth::register
         ]).launch();

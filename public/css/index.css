@@ -33,6 +33,12 @@ input {
   input:not(:last-of-type) {
     margin-bottom: 24px; }
 
+button {
+  border: none;
+  color: inherit;
+  background: none;
+  cursor: pointer; }
+
 .header {
   display: flex;
   padding: 0 16px;
@@ -41,13 +47,8 @@ input {
   align-items: center;
   color: #f4f4f4;
   background: #0e5eba; }
-  .header .login-status button {
-    border: none;
-    color: inherit;
-    background: none;
-    cursor: pointer; }
-    .header .login-status button:not(:last-of-type) {
-      margin-right: 16px; }
+  .header .login-status button:not(:last-of-type) {
+    margin-right: 16px; }
 
 .main-area {
   display: flex;
@@ -75,6 +76,10 @@ input {
   flex-direction: column;
   flex-grow: 1; }
   .editor-container .toolbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 16px;
+    align-items: center;
     height: 42px;
     border-bottom: 1px solid #0e5eba; }
 

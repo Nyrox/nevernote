@@ -1,6 +1,17 @@
 "use strict";
 
+/*
+Makes an API call to the server backend.
+If body_data is defined, its assumed to be either a JSON string or an Object.
+In the latter case it will be run through JSON.parse before being sent.
+In both cases the Content-Type header will be set to application/json
+The callback will be passed (status, responseText) as parameters.
+This call is always asynchronous.
+*/
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -9,6 +20,24 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function api_call(method, endpoint, body_data, cb) {
+	var xhttp = new XMLHttpRequest();
+
+	xhttp.onreadystatechange = function () {
+		if (this.readyState == 4) {
+			cb(this.status, this.responseText);
+		}
+	};
+
+	xhttp.open(method, endpoint, true);
+
+	var data = body_data;
+	if ((typeof data === "undefined" ? "undefined" : _typeof(data)) == "object") data = JSON.stringify(data);
+	if (typeof data == "string") xhttp.setRequestHeader("Content-Type", "application/json");
+
+	xhttp.send(data);
+}
 
 var Profile = function (_React$Component) {
 	_inherits(Profile, _React$Component);
@@ -156,16 +185,15 @@ var RegisterForm = function (_React$Component4) {
 		value: function handleSubmit(event) {
 			event.preventDefault();
 
-			var xhttp = new XMLHttpRequest();
-			xhttp.onreadystatechange = function () {
-				if (this.readyState == 4 && this.status == 200) {
-					var response = JSON.parse(this.responseText);
-					console.log(response);
+			api_call("POST", "/api/auth/register", { login: this.state.login, password: this.state.password, email: this.state.email }, function (status, response) {
+				console.log(typeof response === "undefined" ? "undefined" : _typeof(response));
+				if (status == 200) {
+					var _response = JSON.parse(response);
+					app.setState({ "session_token": _response.session_token, "user_id": _response.user_id });
+				} else {
+					console.log(status, response);
 				}
-			};
-			xhttp.open("POST", "/api/auth/register", true);
-			xhttp.setRequestHeader("Content-Type", "application/json");
-			xhttp.send(JSON.stringify({ login: this.state.login, password: this.state.password, email: this.state.email }));
+			});
 		}
 	}, {
 		key: "handleChange",
@@ -211,17 +239,14 @@ var LoginForm = function (_React$Component5) {
 		value: function handleSubmit(event) {
 			event.preventDefault();
 
-			//
-			var xhttp = new XMLHttpRequest();
-			xhttp.onreadystatechange = function () {
-				if (this.readyState == 4 && this.status == 200) {
-					var response = JSON.parse(this.responseText);
-					app.setState({ "session_token": response.session_token, "user_id": response.user_id });
+			api_call("POST", "/api/auth/login", { login: this.state, password: this.state.password }, function (status, response) {
+				if (status == 200) {
+					var _response2 = JSON.parse(_response2);
+					app.setState({ "session_token": _response2.session_token, "user_id": _response2.user_id });
+				} else {
+					console.log(status, response);
 				}
-			};
-			xhttp.open("POST", "/api/auth/login", true);
-			xhttp.setRequestHeader("Content-Type", "application/json");
-			xhttp.send(JSON.stringify({ login: this.state.login, password: this.state.password }));
+			});
 		}
 	}, {
 		key: "handleChange",
@@ -318,7 +343,10 @@ var Editor = function (_React$Component8) {
 
 		var _this8 = _possibleConstructorReturn(this, (Editor.__proto__ || Object.getPrototypeOf(Editor)).call(this, props));
 
-		_this8.state = {};
+		_this8.state = {
+			note_id: 0,
+			title: "Untitled Draft"
+		};
 		return _this8;
 	}
 
@@ -344,14 +372,28 @@ var Editor = function (_React$Component8) {
 				React.createElement(
 					"div",
 					{ className: "toolbar" },
+					React.createElement("input", { className: "note-title", onChange: this.onChange.bind(this), value: this.state.title, name: "title" }),
 					React.createElement(
-						"div",
-						{ className: "tabs" },
-						this.state.open_tabs
+						"button",
+						{ onClick: this.save.bind(this) },
+						"Save"
 					)
 				),
 				React.createElement("div", { className: "codeflask editor" })
 			);
+		}
+	}, {
+		key: "onChange",
+		value: function onChange() {
+			var _state = _defineProperty({}, event.target.name, event.target.value);
+			this.setState(_state);
+		}
+	}, {
+		key: "save",
+		value: function save() {
+			api_call("POST", "/api/note/create", {}, function (status, response) {
+				console.log(status, response);
+			});
 		}
 	}]);
 

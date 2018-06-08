@@ -1,5 +1,33 @@
 "use strict";
 
+
+/*
+Makes an API call to the server backend.
+If body_data is defined, its assumed to be either a JSON string or an Object.
+In the latter case it will be run through JSON.parse before being sent.
+In both cases the Content-Type header will be set to application/json
+The callback will be passed (status, responseText) as parameters.
+This call is always asynchronous.
+*/
+function api_call(method, endpoint, body_data, cb) {
+	let xhttp = new XMLHttpRequest();
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4) {
+			cb(this.status, this.responseText);
+		}
+	}
+
+	xhttp.open(method, endpoint, true);
+
+	let data = body_data;
+	if (typeof data == "object") data = JSON.stringify(data);
+	if (typeof data == "string") xhttp.setRequestHeader("Content-Type", "application/json");
+
+	xhttp.send(data);
+}
+
+
 class Profile extends React.Component {
 	constructor(props) {
 		super(props);
@@ -76,16 +104,16 @@ class RegisterForm extends React.Component {
 	handleSubmit(event) {
 		event.preventDefault();
 
-		let xhttp = new XMLHttpRequest();
-		xhttp.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200) {
-				let response = JSON.parse(this.responseText);
-				console.log(response);
+		api_call("POST", "/api/auth/register", { login: this.state.login, password: this.state.password, email: this.state.email }, function(status, response) {
+			console.log(typeof response);
+			if (status == 200) {
+				let _response = JSON.parse(response);
+				app.setState({"session_token": _response.session_token, "user_id": _response.user_id});
 			}
-		}
-		xhttp.open("POST", "/api/auth/register", true);
-		xhttp.setRequestHeader("Content-Type", "application/json");
-		xhttp.send(JSON.stringify({ login: this.state.login, password: this.state.password, email: this.state.email }));
+			else {
+				console.log(status, response);
+			}
+		});
 	}
 
 	handleChange(event) {
@@ -116,17 +144,15 @@ class LoginForm extends React.Component {
 	handleSubmit(event) {
 		event.preventDefault();
 
-		//
-		let xhttp = new XMLHttpRequest();
-		xhttp.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200) {
-				let response = JSON.parse(this.responseText);
+		api_call("POST", "/api/auth/login", { login: this.state, password: this.state.password }, function(status, response) {
+			if (status == 200) {
+				let response = JSON.parse(response);
 				app.setState({"session_token": response.session_token, "user_id": response.user_id});
 			}
-		}
-		xhttp.open("POST", "/api/auth/login", true);
-		xhttp.setRequestHeader("Content-Type", "application/json");
-		xhttp.send(JSON.stringify({ login: this.state.login, password: this.state.password }));
+			else {
+				console.log(status, response);
+			}
+		})
 	}
 
 	handleChange(event) {
@@ -178,12 +204,15 @@ class Editor extends React.Component {
 	constructor(props) {
 		super(props);
 
-		this.state = {};
+		this.state = {
+			note_id: 0,
+			title: "Untitled Draft"
+		};
 	}
 
 	componentDidMount() {
 		CodeFlask.prototype.closeCharacter = function() { /* CodeFlask's default behaviour for this is just awful */ };
-		
+
 		this.state.flask_editor = new CodeFlask(".editor", {
 			language: "none",
 			lineNumbers: true,
@@ -196,12 +225,23 @@ class Editor extends React.Component {
 	render() {
 		return (<div className="editor-container">
 			<div className="toolbar">
-				<div className="tabs">
-					{this.state.open_tabs}
-				</div>
+				<input className="note-title" onChange={this.onChange.bind(this)} value={this.state.title} name="title"></input>
+
+				<button onClick={this.save.bind(this)}>Save</button>
 			</div>
 			<div className="codeflask editor"></div>
 		</div>);
+	}
+
+	onChange() {
+		let _state = {[event.target.name]: event.target.value};
+		this.setState(_state);
+	}
+
+	save() {
+		api_call("POST", "/api/note/create", {}, function(status, response) {
+			console.log(status, response);
+		});
 	}
 }
 
