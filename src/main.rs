@@ -1,4 +1,5 @@
 #![feature(plugin)]
+#![feature(decl_macro)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
@@ -89,7 +90,7 @@ pub mod model {
 	    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
 			let mut cookies = request.cookies();
 
-			match cookies.get_private("NN-X-Session-Token") {
+			match cookies.get("NN-X-Session-Token") {
 				Some(token) => {
                     let pool = request.guard::<State<my::Pool>>()?;
                     let mut conn = pool.get_conn().unwrap();
@@ -165,7 +166,7 @@ pub mod api {
             }
 
             let session = generate_session(id, &mut db_conn);
-			cookies.add_private(Cookie::new("NN-X-Session-Token", session.token.to_string()));
+			cookies.add(Cookie::build("NN-X-Session-Token", session.token.to_string()).secure(false).http_only(false).finish());
 
             return Json(LoginResponse { success: true, user_id: id, session_token: session.token });
         }
@@ -339,7 +340,6 @@ fn create_mysql_pool() -> my::Pool {
 	builder
 		// TODO: Use dotenv
 		.user(Some("root"))
-		.pass(Some(""))
 		.ip_or_hostname(Some("localhost"))
 		.db_name(Some("nevernote"))
 		// Needed on windows, because for some reason mysql thinks that file socket exist on windows
